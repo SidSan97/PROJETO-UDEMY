@@ -65,6 +65,7 @@ public class PlayerMove : MonoBehaviour {
             ground = true;
             MyAnimator.SetBool("grounded", ground);
         }
+	    
         else
         {
             ground = false;
