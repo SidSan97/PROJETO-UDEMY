@@ -1,4 +1,4 @@
-﻿using System.Collections;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -18,11 +18,14 @@ public class SistemaHook : MonoBehaviour
     private Vector2 playerPosition; //controla a posicao do player (?)
     private Rigidbody2D ropeHingeAnchorRb; //cria a fisica basica do gancho
     private SpriteRenderer ropeHingeAnchorSprite;// desenha o sprite do gancho
+    public float force;
 
     public LineRenderer ropeRenderer; //responsavel por desenhar uma linha
     public LayerMask ropeLayerMask; // configura qual layer o raycast do hook se movera
     private float ropeMaxCastDistance = 20f; //define o range maximo do hook
     private List<Vector2> ropePositions = new List<Vector2>(); //esta lista vai trackear os pontos de dobra na corda caso entre em colisao com algum objeto
+
+    private bool distanceSet; // ?
 
     void Awake()// inicializa as funcoes
     {
@@ -57,6 +60,7 @@ public class SistemaHook : MonoBehaviour
         }
 
         HandleInput(aimDirection);
+        UpdateRopePositions();
 
     }
     private void SetCrosshairPosition(float aimAngle) // configura uma funcao para decidir a posicao da mira
@@ -90,7 +94,7 @@ public class SistemaHook : MonoBehaviour
                 ropeAttached = true;// confirma que o hook esta agarrado em algo
                 if (!ropePositions.Contains(hit.point))// ocorrera caso o hook n encosta em algum lugar
                 {
-                    transform.GetComponent<Rigidbody2D>().AddForce(new Vector2(0f, 2f), ForceMode2D.Impulse);// uma forca e adicionada a personagem
+                    transform.GetComponent<Rigidbody2D>().AddForce(new Vector2(0f, force), ForceMode2D.Impulse);// uma forca e adicionada a personagem
                     ropePositions.Add(hit.point);//adiciona um ponto de contato entre o terreno e a corda
                     ropeJoint.distance = Vector2.Distance(playerPosition, hit.point);// retorna a distancia entre o player e o ponto de contato do hook
                     ropeJoint.enabled = true;
@@ -100,9 +104,9 @@ public class SistemaHook : MonoBehaviour
 
             else// caso o raycast n colida com nada
             {
-                ropeRenderer.enabled = false;
-                ropeAttached = false;
-                ropeJoint.enabled = false;
+                ropeRenderer.enabled = false; // a corda n sera desenhada
+                ropeAttached = false;// a booleana que identifica se esta ou nao conectada torna-se false
+                ropeJoint.enabled = false;// desliga as juntas da corda
             }
             if (Input.GetMouseButton(1))// se o botao direito do mouse for clicado, a corda e resetada
             {
@@ -110,7 +114,7 @@ public class SistemaHook : MonoBehaviour
             }
         }
     }
-    private void ResetRope()
+    private void ResetRope()// deleta a corda
     {
         ropeJoint.enabled = false;
         ropeAttached = false;
@@ -121,4 +125,50 @@ public class SistemaHook : MonoBehaviour
         ropePositions.Clear();
         ropeHingeAnchorSprite.enabled = false;
     }
+    private void UpdateRopePositions()
+    {
+        if (!ropeAttached)
+        {
+            return; // sai dessa funcao se a corda n estiver ligada a nada
+        }
+
+        ropeRenderer.positionCount = ropePositions.Count + 1;//retorna a quantidade de vertices encontrados no vector ropePositions (+ 1 por causa do player) e armazena no positionCount do line renderer
+        
+        for (var i = ropeRenderer.positionCount - 1; i >= 0; i--)// i sera igual ao
+        {
+            if (i != ropeRenderer.positionCount - 1)// se nao for o ultimo ponto do line renderer
+            {
+                ropeRenderer.SetPosition(i, ropePositions[i]);
+
+                if (i == ropePositions.Count - 1 || ropePositions.Count == 1) //
+                {
+                    var ropePosition = ropePositions[ropePositions.Count - 1];
+                    if (ropePositions.Count == 1)
+                    {
+                        ropeHingeAnchorRb.transform.position = ropePosition;
+                        if (!distanceSet)
+                        {
+                            ropeJoint.distance = Vector2.Distance(transform.position, ropePosition);
+                            distanceSet = true;
+                        }
+                    }
+                }
+                else if (i - 1 == ropePositions.IndexOf(ropePositions.Last()))
+                {
+                    var ropePosition = ropePositions.Last();
+                    ropeHingeAnchorRb.transform.position = ropePosition;
+                    if (!distanceSet)
+                    {
+                        ropeJoint.distance = Vector2.Distance(transform.position, ropePosition);
+                        distanceSet = true;
+                    }
+                }
+            }
+            else
+            {
+                ropeRenderer.SetPosition(i, transform.position);
+            }
+        }
+    }
+
 }
