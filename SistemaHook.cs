@@ -13,7 +13,7 @@ public class SistemaHook : MonoBehaviour
     public DistanceJoint2D ropeJoint; //cria a conexao entre dois pontos
     public Transform crosshair;//movimentacao da mira da personagem
     public SpriteRenderer crosshairSprite; //desenha o sprite da mira
-    public PlayerMove playerMovement;
+    public PlayerMovement PlayerMovement;
     private bool ropeAttached; //confere se a corda esta ou nao conectada a algo
     private Vector2 playerPosition; //controla a posicao do player (?)
     private Rigidbody2D ropeHingeAnchorRb; //cria a fisica basica do gancho
@@ -26,6 +26,11 @@ public class SistemaHook : MonoBehaviour
     private List<Vector2> ropePositions = new List<Vector2>(); //esta lista vai trackear os pontos de dobra na corda caso entre em colisao com algum objeto
 
     private bool distanceSet; // ?
+
+
+
+    public float climbSpeed = 3f;
+    private bool isColliding;
 
     void Awake()// inicializa as funcoes
     {
@@ -53,14 +58,18 @@ public class SistemaHook : MonoBehaviour
         if (!ropeAttached)
         {
             SetCrosshairPosition(aimAngle);
+            PlayerMovement.isSwinging = false;
         }
         else
         {
+            PlayerMovement.isSwinging = true;
+            PlayerMovement.ropeHook = ropePositions.Last();
             crosshairSprite.enabled = false;
         }
 
         HandleInput(aimDirection);
         UpdateRopePositions();
+        HandleRopeLength();
 
     }
     private void SetCrosshairPosition(float aimAngle) // configura uma funcao para decidir a posicao da mira
@@ -73,7 +82,7 @@ public class SistemaHook : MonoBehaviour
         var x = transform.position.x + 1f * Mathf.Cos(aimAngle); // configura a posicao x da mira baseando-se na posicao do player e no angulo formado pela posicao do mouse
         var y = transform.position.y + 1f * Mathf.Sin(aimAngle);// configura a posicao y da mira
 
-        var crossHairPosition = new Vector3(x, y, 0); //cria um vector3 para guardar a posicao da mira
+        var crossHairPosition = new Vector3(x, y + 0.5f, 0); //cria um vector3 para guardar a posicao da mira
         crosshair.transform.position = crossHairPosition;
 
 
@@ -108,17 +117,17 @@ public class SistemaHook : MonoBehaviour
                 ropeAttached = false;// a booleana que identifica se esta ou nao conectada torna-se false
                 ropeJoint.enabled = false;// desliga as juntas da corda
             }
-            if (Input.GetMouseButton(1))// se o botao direito do mouse for clicado, a corda e resetada
-            {
-                ResetRope();
-            }
+        }
+        if (Input.GetMouseButton(1))// se o botao direito do mouse for clicado, a corda e resetada
+        {
+            ResetRope();
         }
     }
     private void ResetRope()// deleta a corda
     {
         ropeJoint.enabled = false;
         ropeAttached = false;
-        playerMovement.isSwinging = false;
+        PlayerMovement.isSwinging = false;
         ropeRenderer.positionCount = 2;
         ropeRenderer.SetPosition(0, transform.position);
         ropeRenderer.SetPosition(1, transform.position);
@@ -133,7 +142,7 @@ public class SistemaHook : MonoBehaviour
         }
 
         ropeRenderer.positionCount = ropePositions.Count + 1;//retorna a quantidade de vertices encontrados no vector ropePositions (+ 1 por causa do player) e armazena no positionCount do line renderer
-        
+
         for (var i = ropeRenderer.positionCount - 1; i >= 0; i--)// i sera igual ao
         {
             if (i != ropeRenderer.positionCount - 1)// se nao for o ultimo ponto do line renderer
@@ -171,4 +180,27 @@ public class SistemaHook : MonoBehaviour
         }
     }
 
+    private void OnTriggerStay2D(Collider2D colliderStay)
+    {
+        isColliding = true;
+    }
+
+    private void OnTriggerExit2D(Collider2D colliderOnExit)
+    {
+
+        isColliding = false;
+
+    }
+    private void HandleRopeLength()
+    {
+        //recebe o input vertical para recolher a corda
+        if (Input.GetAxis("Vertical") >= 1f && ropeAttached && !isColliding)
+        {
+            ropeJoint.distance -= Time.deltaTime * climbSpeed;
+        }
+        else if (Input.GetAxis("Vertical") < 0f && ropeAttached)
+        {
+            ropeJoint.distance += Time.deltaTime * climbSpeed;
+        }
+    }
 }
