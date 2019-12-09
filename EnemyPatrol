@@ -1,0 +1,40 @@
+using UnityEngine;
+using System.Collections;
+
+public class EnemyPatrol : MonoBehaviour
+{
+    public float walkSpeed = 1.0f;    
+    private float wallLeft;
+    private float wallRight;
+    //vc pega as coordenadas de onde vc quer q o inimigo ande na cena e coloca aqui
+    public float distanceLeft;
+    public float distanceRight;
+    public SpriteRenderer enemySprite;
+    float walkingDirection = 1.0f;
+    Vector2 walkAmount;
+    float originalX; 
+
+
+    void Start()
+    {
+        wallLeft = transform.position.x + distanceLeft;
+        wallRight = transform.position.x + distanceRight;
+    }
+
+
+    void Update()
+    {
+        walkAmount.x = walkingDirection * walkSpeed * Time.deltaTime;
+        if (walkingDirection > 0.0f && transform.position.x >= wallRight)
+        {
+            walkingDirection = -1.0f;
+            enemySprite.flipX = true;
+        }
+        else if (walkingDirection < 0.0f && transform.position.x <= wallLeft)
+        {
+            walkingDirection = 1.0f;
+            enemySprite.flipX = false;
+        }
+        transform.Translate(walkAmount);
+    }
+}
